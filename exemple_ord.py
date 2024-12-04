@@ -3,20 +3,13 @@ import pandas as pd
 from sklearn.manifold import MDS
 import matplotlib.pyplot as plt
 
-# Classements des préférences
-data = {
-    'Individu': ['A', 'B', 'C', 'D', 'E'],
-    'Classique': [1, 1, 1, 4, 1],
-    'Jazz': [2, 2, 2, 3, 3],
-    'Rock': [3, 3, 3, 2, 2],
-    'Pop': [4, 4, 4, 1, 4]
-}
-
-df = pd.DataFrame(data)
-df.set_index('Individu', inplace=True)
+# Charger les données
+df = pd.read_csv('preferences_genres_musique.csv')
+df.set_index('Personne', inplace=True)
 print(df)
 
-genres = ['Classique', 'Jazz', 'Rock', 'Pop']
+# Définir les genres
+genres = ['Classique', 'Jazz', 'Rock', 'Pop', 'Hip-Hop', 'Électronique']
 n_genres = len(genres)
 
 # Initialiser une matrice de dissimilarité
@@ -28,44 +21,47 @@ for i in range(n_genres):
         if i != j:
             # Différence des rangs pour chaque individu
             diff = df[genres[i]] - df[genres[j]]
-            # Somme des carrés des différences
-            dissimilarity[i, j] = np.sum(diff**2)
-        else:
-            dissimilarity[i, j] = 0  # La dissimilarité avec soi-même est zéro
+            # Calculer la dissimilarité (somme des carrés des différences)
+            dissimilarity[i, j] = np.sum(diff ** 2)
 
-# Convertir en DataFrame pour une meilleure lisibilité
-dissimilarity_df = pd.DataFrame(dissimilarity, index=genres, columns=genres)
-print(dissimilarity_df)
+# Appliquer MDS metric=False
+mds = MDS(dissimilarity='precomputed', random_state=42, metric=False)
+pos = mds.fit_transform(dissimilarity)
 
-from sklearn.manifold import MDS
+# Visualiser les résultats
+plt.scatter(pos[:, 0], pos[:, 1])
+for i, genre in enumerate(genres):
+    plt.annotate(genre, (pos[i, 0], pos[i, 1]))
+plt.title('Visualisation des dissimilarités entre genres musicaux sans métrique')
+plt.show()
 
-# Créer une instance du MDS non métrique
-mds = MDS(n_components=2, dissimilarity='precomputed', metric=True, random_state=42)
+# Appliquer MDS metric=True
+mds = MDS(dissimilarity='precomputed', random_state=42, metric=True)
+pos = mds.fit_transform(dissimilarity)
 
-# Appliquer le MDS aux données de dissimilarité
-mds_results = mds.fit_transform(dissimilarity)
+# Visualiser les résultats
+plt.scatter(pos[:, 0], pos[:, 1])
+for i, genre in enumerate(genres):
+    plt.annotate(genre, (pos[i, 0], pos[i, 1]))
+plt.title('Visualisation des dissimilarités entre genres musicaux avec métrique')
+plt.show()
 
-# Créer un DataFrame des résultats pour faciliter la manipulation
-mds_df = pd.DataFrame(mds_results, index=genres, columns=['Dim1', 'Dim2'])
-print(mds_df)
+# ACP
+from sklearn.decomposition import PCA
 
-import matplotlib.pyplot as plt
+pca = PCA(n_components=2)
+pos_pca = pca.fit_transform(dissimilarity)
 
-# Taille de la figure
-plt.figure(figsize=(8, 6))
+# Visualiser les résultats
+plt.scatter(pos_pca[:, 0], pos_pca[:, 1])
+for i, genre in enumerate(genres):
+    plt.annotate(genre, (pos_pca[i, 0], pos_pca[i, 1]))
+plt.title('Visualisation des dissimilarités entre genres musicaux avec ACP')
+plt.show()
 
-# Tracer les points
-plt.scatter(mds_df['Dim1'], mds_df['Dim2'])
-
-# Ajouter les étiquettes pour chaque point
-for genre in genres:
-    plt.text(mds_df.loc[genre, 'Dim1'] + 0.05, mds_df.loc[genre, 'Dim2'] + 0.05, genre, fontsize=12)
-
-# Ajouter les axes et le titre
-plt.xlabel('Dimension 1')
-plt.ylabel('Dimension 2')
-plt.title('MDS non métrique des genres musicaux')
-
-# Afficher le graphique
-plt.grid(True)
+# visualisation de l'explication de la variance par les composantes principales
+plt.plot(np.cumsum(pca.explained_variance_ratio_))
+plt.xlabel('Nombre de composantes')
+plt.ylabel('Variance expliquée')
+plt.title('Explication de la variance par les composantes principales')
 plt.show()
